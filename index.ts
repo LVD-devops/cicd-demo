@@ -3,7 +3,7 @@ const world = 'world fff             sdgsdgsdgs           dgsdgsdgsdg           
 export function hello(who: string = world ): string {
     const tH = {
         t: 123,
-        hooT: 77
+        hooT: 7788
     };
     return `Hello ${who}! `;
 }
