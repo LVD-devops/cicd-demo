@@ -1,0 +1,31 @@
+name: Continue Integration Workflow
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+    branches:
+      - main
+      - 'releases/**'
+jobs:
+  check_source:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 'v18.20.x'
+
+      - name: Remove package-lock.json
+        run: rm -f package-lock.json
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Compile TypeScript
+        run: npm run lint
