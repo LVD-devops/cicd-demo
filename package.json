@@ -1,6 +1,14 @@
 {
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint **/*.ts"
+  },
   "devDependencies": {
+    "@eslint/js": "^9.4.0",
+    "eslint": "^9.4.0",
+    "globals": "^15.3.0",
     "gts": "^5.3.0",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "typescript-eslint": "^7.12.0"
   }
 }
