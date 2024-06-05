@@ -33,7 +33,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '18.x'
+          node-version: 'v18.20.x'
 
       - name: Remove package-lock.json
         run: rm -f package-lock.json
