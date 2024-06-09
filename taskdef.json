@@ -1,0 +1,25 @@
+{
+  "containerDefinitions": [
+    {
+      "name": "{{ must_env `ECS_CONTAINER_NAME` }}",
+      "image": "{{ must_env `ECS_IMAGE` }}",
+      "cpu": 256,
+      "memory": 512,
+      "links": [],
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "hostPort": 80,
+          "protocol": "tcp"
+        }
+      ]
+    }
+  ],
+  "family": "{{ must_env `ECS_TASK_DEFINITION` }}",
+  "executionRoleArn": "{{ must_env `ECS_TASK_EXECUTE_ROLE` }}",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512"
+}

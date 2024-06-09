@@ -1,0 +1,5 @@
+region: ${{ env.AWS_REGION }} # or AWS_REGION environment variable
+cluster: testcluster
+service: testservice
+task_definition: taskdef.json
+timeout: 5m # default 10m
