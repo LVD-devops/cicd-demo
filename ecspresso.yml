@@ -1,4 +1,4 @@
-region: ${{ env.AWS_REGION }} # or AWS_REGION environment variable
+region: us-east-1 # or AWS_REGION environment variable
 cluster: testcluster
 service: testservice
 task_definition: taskdef.json
