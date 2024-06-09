@@ -57,16 +57,16 @@ jobs:
           aws ecs create-cluster --cluster-name ${{ env.ECS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }} || \
           echo "Cluster ${{ env.ECS_CLUSTER_NAME }} already exists."
 
-#      - name: Build, tag, and push image to Amazon ECR
-#        id: build-image
-#        env:
-#          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
-#          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-#          IMAGE_TAG: ${{ github.sha }}
-#        run: |
-#          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-#          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-#          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+      #      - name: Build, tag, and push image to Amazon ECR
+      #        id: build-image
+      #        env:
+      #          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+      #          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+      #          IMAGE_TAG: ${{ github.sha }}
+      #        run: |
+      #          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+      #          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      #          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
       - name: Build Docker Image
         id: build-image
         env:
@@ -78,43 +78,43 @@ jobs:
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
           echo "ECS_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
           echo "ECS_REGISTRY=$ECR_REGISTRY" >> $GITHUB_ENV
-
-      - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ steps.build-image.outputs.image }}
-          format: "table"
-          severity: "CRITICAL,HIGH"
-          exit-code: 0
-
-      - name: Check Docker best practices with Dockle
-        uses: erzz/dockle-action@v1
-        with:
-          image: ${{ steps.build-image.outputs.image }}
-          failure-threshold: fatal
-          exit-code: 0
+      #
+      #      - name: Scan image with Trivy
+      #        uses: aquasecurity/trivy-action@master
+      #        with:
+      #          image-ref: ${{ steps.build-image.outputs.image }}
+      #          format: "table"
+      #          severity: "CRITICAL,HIGH"
+      #          exit-code: 0
+      #
+      #      - name: Check Docker best practices with Dockle
+      #        uses: erzz/dockle-action@v1
+      #        with:
+      #          image: ${{ steps.build-image.outputs.image }}
+      #          failure-threshold: fatal
+      #          exit-code: 0
 
       - name: Push to ECR
         if: success()
         run: docker push ${{ steps.build-image.outputs.image }}
 
-#      - name: Deploy updated container image via blue/green deployment to ECS service
-#        uses: silinternational/ecs-deploy@master
-#        with:
-#          aws_access_key_cmd: '--aws-access-key'
-#          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws_secret_key_cmd: '--aws-secret-key'
-#          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          region_cmd: '--region'
-#          region: ${{ secrets.AWS_REGION }}
-#          cluster_cmd: '--cluster'
-#          cluster: ${{ env.ECS_CLUSTER_NAME }}
-#          image_cmd: '--image'
-#          image: ${{ steps.build-image.outputs.image }}
-#          service_name_cmd: '--service-name'
-#          service_name: ${{ env.ECS_SERVICE_NAME }}
-#          wait_for_success_cmd: '--wait-for-success'
-#          wait_for_success: true
+      #      - name: Deploy updated container image via blue/green deployment to ECS service
+      #        uses: silinternational/ecs-deploy@master
+      #        with:
+      #          aws_access_key_cmd: '--aws-access-key'
+      #          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #          aws_secret_key_cmd: '--aws-secret-key'
+      #          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #          region_cmd: '--region'
+      #          region: ${{ secrets.AWS_REGION }}
+      #          cluster_cmd: '--cluster'
+      #          cluster: ${{ env.ECS_CLUSTER_NAME }}
+      #          image_cmd: '--image'
+      #          image: ${{ steps.build-image.outputs.image }}
+      #          service_name_cmd: '--service-name'
+      #          service_name: ${{ env.ECS_SERVICE_NAME }}
+      #          wait_for_success_cmd: '--wait-for-success'
+      #          wait_for_success: true
       #
       #      - name: Update ECS task definition JSON
       #        env:
@@ -173,17 +173,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-#      - name: Update ECS task definition JSON
-#        env:
-#          TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
-#          TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
-#          TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
-#          IMAGE: ${{ env.ECS_IMAGE }}
-#        run: |
-#          jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
-#             .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
-#             .containerDefinitions[0].image = "'${{ steps.build-image.outputs.image }}'" |
-#             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./.json > ./ecs/create-task-definition-updated.json
+      #      - name: Update ECS task definition JSON
+      #        env:
+      #          TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
+      #          TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
+      #          TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
+      #          IMAGE: ${{ env.ECS_IMAGE }}
+      #        run: |
+      #          jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
+      #             .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
+      #             .containerDefinitions[0].image = "'${{ steps.build-image.outputs.image }}'" |
+      #             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./.json > ./ecs/create-task-definition-updated.json
 
       - name: Download ecspresso
         uses: kayac/ecspresso@v2
@@ -198,6 +198,18 @@ jobs:
         run: |
           cat ecspresso.yml
           cat taskdef.json
+
+      - name: Update ECS task definition JSON
+        env:
+          TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
+          TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
+          TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
+          IMAGE: ${{ env.ECS_IMAGE }}
+        run: |
+          jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
+             .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
+             .containerDefinitions[0].image = "'${{ env.ECS_IMAGE }}'" |
+             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./taskdef.json > ./taskdef_updated.json
 
       - name: Deploy to ECS service
         run: ecspresso deploy --config ecspresso.yml
