@@ -100,23 +100,23 @@ jobs:
         if: success()
         run: docker push ${{ steps.build-image.outputs.image }}
 
-      #      - name: Deploy updated container image via blue/green deployment to ECS service
-      #        uses: silinternational/ecs-deploy@master
-      #        with:
-      #          aws_access_key_cmd: '--aws-access-key'
-      #          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #          aws_secret_key_cmd: '--aws-secret-key'
-      #          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #          region_cmd: '--region'
-      #          region: ${{ secrets.AWS_REGION }}
-      #          cluster_cmd: '--cluster'
-      #          cluster: ${{ env.ECS_CLUSTER_NAME }}
-      #          image_cmd: '--image'
-      #          image: ${{ steps.build-image.outputs.image }}
-      #          service_name_cmd: '--service-name'
-      #          service_name: ${{ env.ECS_SERVICE_NAME }}
-      #          wait_for_success_cmd: '--wait-for-success'
-      #          wait_for_success: true
+      - name: Deploy updated container image via blue/green deployment to ECS service
+        uses: silinternational/ecs-deploy@master
+        with:
+          aws_access_key_cmd: '--aws-access-key'
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key_cmd: '--aws-secret-key'
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region_cmd: '--region'
+          region: ${{ secrets.AWS_REGION }}
+          cluster_cmd: '--cluster'
+          cluster: ${{ env.ECS_CLUSTER_NAME }}
+          image_cmd: '--image'
+          image: ${{ steps.build-image.outputs.image }}
+          service_name_cmd: '--service-name'
+          service_name: ${{ env.ECS_SERVICE_NAME }}
+          wait_for_success_cmd: '--wait-for-success'
+          wait_for_success: true
       #
       #      - name: Update ECS task definition JSON
       #        env:
@@ -160,38 +160,38 @@ jobs:
       #          service: ${{ env.ECS_SERVICE_NAME }}
       #          cluster: ${{ env.ECS_CLUSTER_NAME }}
       #          wait-for-service-stability: true
-      - name: Download ecspresso
-        uses: kayac/ecspresso@v2
-        with:
-          version: v2.3.3
-
-      - name: Substitute environment variables in ecspresso config
-        run: |
-          envsubst < ecspresso.template.yml > ecspresso.yml
-
-      - name: Update ECS task definition JSON
-        env:
-          TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
-          TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
-          TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
-          IMAGE: ${{ steps.build-image.outputs.image }}
-        run: |
-          jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
-             .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
-             .containerDefinitions[0].image = "'${{ steps.build-image.outputs.image }}'" |
-             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./taskdef.json > ./taskdef_updated.json
-
-      - name: Show ecspresso.yml
-        run: |
-          cat ecspresso.yml
-          cat taskdef_updated.json
-
-      - name: Deploy to ECS service
-        run: ecspresso deploy --config ecspresso.yml
-
-      - name: Logout of Amazon ECR
-        if: always()
-        run: docker logout ${{ env.ECR_REGISTRY }}
+#      - name: Download ecspresso
+#        uses: kayac/ecspresso@v2
+#        with:
+#          version: v2.3.3
+#
+#      - name: Substitute environment variables in ecspresso config
+#        run: |
+#          envsubst < ecspresso.template.yml > ecspresso.yml
+#
+#      - name: Update ECS task definition JSON
+#        env:
+#          TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
+#          TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
+#          TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
+#          IMAGE: ${{ steps.build-image.outputs.image }}
+#        run: |
+#          jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
+#             .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
+#             .containerDefinitions[0].image = "'${{ steps.build-image.outputs.image }}'" |
+#             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./taskdef.json > ./taskdef_updated.json
+#
+#      - name: Show ecspresso.yml
+#        run: |
+#          cat ecspresso.yml
+#          cat taskdef_updated.json
+#
+#      - name: Deploy to ECS service
+#        run: ecspresso deploy --config ecspresso.yml
+#
+#      - name: Logout of Amazon ECR
+#        if: always()
+#        run: docker logout ${{ env.ECR_REGISTRY }}
 
 #  deploy:
 #    runs-on: ubuntu-latest
