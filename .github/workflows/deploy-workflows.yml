@@ -190,6 +190,15 @@ jobs:
         with:
           version: v2.3.3
 
+      - name: Substitute environment variables in ecspresso config
+        run: |
+          envsubst < ecspresso.template.yml > ecspresso.yml
+
+      - name: Show ecspresso.yml
+        run: |
+          cat ecspresso.yml
+          cat taskdef.json
+
       - name: Deploy to ECS service
         run: ecspresso deploy --config ecspresso.yml
 
