@@ -1,30 +1,31 @@
-name: Manual Deploy
+name: Main Deploy Aws Ecs Workflow
 
+#on:
+#  workflow_dispatch:
+#    inputs:
+#      environment:
+#        description: 'Environment to run:'
+#        type: environment
+#        required: true
+#        default: 'test'
 on:
-  workflow_dispatch:
-    inputs:
-      logLevel:
-        description: 'Log level'
-        required: true
-        default: 'warning'
-        type: choice
-        options:
-          - info
-          - warning
-          - debug
-      tags:
-        description: 'Test scenario tags'
-        required: false
-        type: boolean
-      environment:
-        description: 'Environment to run tests against'
-        type: environment
-        required: true
-        default: 'Test'
+  push:
+    branches:
+      - test
+env:
+  ECR_REPOSITORY: cicd-demo-repo
+  ECS_CLUSTER_NAME: cicd-demo-ecs-cluster
+  ECS_SERVICE_NAME: cicd-demo-ecs-service
+  ECS_TASK_DEFINITION: cicd-demo-task-definition
+  ECS_TASK_EXECUTE_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole
+  ECS_CONTAINER_NAME: cicd-demo-ecs-container
+  APP_NAME: cicd-demo-app
+  ENV_NAME: dev #${{ inputs.environment }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: Develop
 
     steps:
       - name: Checkout code
@@ -35,11 +36,99 @@ jobs:
         with:
           node-version: 'v18.20.x'
 
-      - name: Remove package-lock.json
-        run: rm -f package-lock.json
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Compile TypeScript
-        run: npm run build
+      - name: Create ECR repository if it does not exist
+        run: |
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} || \
+          aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }}
+      #
+      #      - name: Create ECS cluster if it does not exist
+      #        run: |
+      #          aws ecs create-cluster --cluster-name ${{ env.ECS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }} || \
+      #          echo "Cluster ${{ env.ECS_CLUSTER_NAME }} already exists."
+      #
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Deploy updated container image via blue/green deployment to ECS service
+        uses: silinternational/ecs-deploy@master
+        with:
+          aws_access_key_cmd: '--aws-access-key'
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key_cmd: '--aws-secret-key'
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region_cmd: '--region'
+          region: ${{ secrets.AWS_REGION }}
+          cluster_cmd: '--cluster'
+          cluster: ${{ env.ECS_CLUSTER_NAME }}
+          image_cmd: '--image'
+          image: ${{ steps.build-image.outputs.image }}
+          service_name_cmd: '--service-name'
+          service_name: ${{ env.ECS_SERVICE_NAME }}
+          wait_for_success_cmd: '--wait-for-success'
+          wait_for_success: true
+      #
+      #      - name: Update ECS task definition JSON
+      #        env:
+      #          TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
+      #          TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
+      #          TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
+      #          IMAGE: ${{ steps.build-image.outputs.image }}
+      #        run: |
+      #          jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
+      #             .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
+      #             .containerDefinitions[0].image = "'${{ steps.build-image.outputs.image }}'" |
+      #             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./ecs/create-task-definition.json > ./ecs/create-task-definition-updated.json
+      #
+      #      - name: Check content task definition file
+      #        run:  cat ./ecs/create-task-definition-updated.json
+      #
+      #      - name: Register ECS Task Definition
+      #        id: task-def
+      #        uses: aws-actions/amazon-ecs-render-task-definition@v1
+      #        with:
+      #          task-definition: ./ecs/create-task-definition-updated.json
+      #          container-name: ${{ env.ECS_CONTAINER_NAME }}
+      #          image: ${{ steps.build-image.outputs.image }}
+      #
+      #      - name: Update ECS task definition JSON
+      #        env:
+      #          TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
+      #          TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
+      #          TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
+      #          IMAGE: ${{ steps.build-image.outputs.image }}
+      #        run: |
+      #          jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
+      #             .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
+      #             .containerDefinitions[0].image = "'${{ steps.build-image.outputs.image }}'" |
+      #             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./ecs/create-task-definition.json > ./ecs/create-task-definition-updated.json
+      #
+      #      - name: Deploy to Amazon ECS service
+      #        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      #        with:
+      #          task-definition: ${{ steps.task-def.outputs.task-definition }}
+      #          service: ${{ env.ECS_SERVICE_NAME }}
+      #          cluster: ${{ env.ECS_CLUSTER_NAME }}
+      #          wait-for-service-stability: true
+
+      - name: Logout of Amazon ECR
+        if: always()
+        run: docker logout ${{ steps.ecr-login.outputs.registry }}
