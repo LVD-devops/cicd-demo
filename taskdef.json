@@ -1,25 +1,29 @@
 {
+  "family": "",
+  "networkMode": "awsvpc",
   "containerDefinitions": [
     {
-      "name": "{{ must_env `ECS_CONTAINER_NAME` }}",
-      "image": "{{ must_env `ECS_IMAGE` }}",
+      "name": "",
+      "image": "",
       "cpu": 256,
       "memory": 512,
-      "links": [],
+      "essential": true,
       "portMappings": [
         {
           "containerPort": 80,
           "hostPort": 80,
-          "protocol": "tcp"
+          "protocol": "tcp",
+          "appProtocol": "http"
         }
       ]
     }
   ],
-  "family": "{{ must_env `ECS_TASK_DEFINITION` }}",
-  "executionRoleArn": "{{ must_env `ECS_TASK_EXECUTE_ROLE` }}",
-  "requiresCompatibilities": [
-    "FARGATE"
-  ],
+  "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
-  "memory": "512"
+  "memory": "512",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "executionRoleArn": ""
 }
