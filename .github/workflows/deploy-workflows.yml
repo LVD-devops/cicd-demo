@@ -47,16 +47,16 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v1
 
-#      - name: Create ECR repository if it does not exist
-#        run: |
-#          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} || \
-#          aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }}
-      #
-      #      - name: Create ECS cluster if it does not exist
-      #        run: |
-      #          aws ecs create-cluster --cluster-name ${{ env.ECS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }} || \
-      #          echo "Cluster ${{ env.ECS_CLUSTER_NAME }} already exists."
-      #
+      - name: Create ECR repository if it does not exist
+        run: |
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} || \
+          aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }}
+
+      - name: Create ECS cluster if it does not exist
+        run: |
+          aws ecs create-cluster --cluster-name ${{ env.ECS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }} || \
+          echo "Cluster ${{ env.ECS_CLUSTER_NAME }} already exists."
+
 #      - name: Build, tag, and push image to Amazon ECR
 #        id: build-image
 #        env:
