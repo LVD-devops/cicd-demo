@@ -26,7 +26,9 @@ jobs:
   build-push:
     runs-on: ubuntu-latest
     environment: Develop
-
+    outputs:
+      ecs-image: ${{ steps.build-image.outputs.image }}
+      ecs-registry: ${{ steps.ecr-login.outputs.registry }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -76,7 +78,6 @@ jobs:
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "ECS_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
           echo "ECS_REGISTRY=$ECR_REGISTRY" >> $GITHUB_ENV
       #
       #      - name: Scan image with Trivy
@@ -199,11 +200,11 @@ jobs:
           TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
           TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
           TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
-          IMAGE: ${{ env.ECS_IMAGE }}
+          IMAGE: ${{ needs.build-push.outputs.ecs-image }}
         run: |
           jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
              .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
-             .containerDefinitions[0].image = "'${{ env.ECS_IMAGE }}'" |
+             .containerDefinitions[0].image = "'${{ needs.build-push.outputs.ecs-image }}'" |
              .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./taskdef.json > ./taskdef_updated.json
 
       - name: Show ecspresso.yml
@@ -216,4 +217,4 @@ jobs:
 
       - name: Logout of Amazon ECR
         if: always()
-        run: docker logout ${{ env.ECS_REGISTRY }}
+        run: docker logout ${{ needs.build-push.outputs.ecs-registry }}
