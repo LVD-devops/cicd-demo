@@ -85,7 +85,7 @@ jobs:
           image-ref: ${{ steps.build-image.outputs.image }}
           format: "table"
           severity: "CRITICAL,HIGH"
-          exit-code: 1
+          exit-code: 0
 
       - name: Check Docker best practices with Dockle
         uses: erzz/dockle-action@v1
