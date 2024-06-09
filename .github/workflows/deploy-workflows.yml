@@ -194,11 +194,6 @@ jobs:
         run: |
           envsubst < ecspresso.template.yml > ecspresso.yml
 
-      - name: Show ecspresso.yml
-        run: |
-          cat ecspresso.yml
-          cat taskdef.json
-
       - name: Update ECS task definition JSON
         env:
           TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
@@ -210,6 +205,11 @@ jobs:
              .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
              .containerDefinitions[0].image = "'${{ env.ECS_IMAGE }}'" |
              .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./taskdef.json > ./taskdef_updated.json
+
+      - name: Show ecspresso.yml
+        run: |
+          cat ecspresso.yml
+          cat taskdef_updated.json
 
       - name: Deploy to ECS service
         run: ecspresso deploy --config ecspresso.yml
