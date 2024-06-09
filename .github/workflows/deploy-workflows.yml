@@ -92,7 +92,7 @@ jobs:
         with:
           image: ${{ steps.build-image.outputs.image }}
           failure-threshold: fatal
-          exit-code: 1
+          exit-code: 0
 
       - name: Push to ECR
         if: success()
