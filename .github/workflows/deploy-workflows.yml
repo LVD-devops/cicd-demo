@@ -129,7 +129,7 @@ jobs:
 #          service_name: ${{ env.ECS_SERVICE_NAME }}
           task_definition_cmd: '--task-definition'
           task_definition: ${{ env.ECS_TASK_DEFINITION }}
-          task_definition_file_cmd: '--task-definition'
+          task_definition_file_cmd: '--task-definition-file'
           task_definition_file: 'taskdef_updated.json'
           wait_for_success_cmd: '--wait-for-success'
           wait_for_success: true
