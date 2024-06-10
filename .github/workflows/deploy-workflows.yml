@@ -23,48 +23,48 @@ env:
   ENV_NAME: Develop #${{ inputs.environment }}
 
 jobs:
-  build-infra:
-    runs-on: ubuntu-latest
-    environment: Develop
-    outputs:
-      vpc-id: ${{ steps.vpc.outputs.vpc-id }}
-      subnet-one: ${{ steps.vpc.outputs.subnet-one }}
-      subnet-two: ${{ steps.vpc.outputs.subnet-two }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@master
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Retrieve default VPC ID and public subnets
-        id: vpc
-        run: |
-          VPC_ID=`aws ec2 describe-vpcs --filters "Name=isDefault, Values=true" --query 'Vpcs[].VpcId' --output text`
-          echo "vpc-id=$VPC_ID" >> "$GITHUB_OUTPUT"
-  
-          SUBNET_1=`aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=default-for-az,Values=true" --query 'Subnets[0].SubnetId' --output text`
-          echo "subnet-one=$SUBNET_1" >> "$GITHUB_OUTPUT"
-  
-          SUBNET_2=`aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=default-for-az,Values=true" --query 'Subnets[1].SubnetId' --output text`
-          echo "subnet-two=$SUBNET_2" >> "$GITHUB_OUTPUT"
-          
-      - name: Deploy infrastructure with CloudFormation
-        id: infrastructure-stack
-        uses: aws-actions/aws-cloudformation-github-deploy@v1
-        with:
-          name: ${{ env.APP_NAME }}-infra
-          template: cloudformation-templates/infrastructure.yml
-          role-arn: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-cloudformation-stack-role
-          no-fail-on-empty-changeset: "1"
-          parameter-overrides: >-
-            EnvironmentName=${{ env.ENV_NAME }},
-            VPC=${{ steps.vpc.outputs.vpc-id }},
-            PublicSubnetOne=${{ steps.vpc.outputs.subnet-one }},
-            PublicSubnetTwo=${{ steps.vpc.outputs.subnet-two }}
+#  build-infra:
+#    runs-on: ubuntu-latest
+#    environment: Develop
+#    outputs:
+#      vpc-id: ${{ steps.vpc.outputs.vpc-id }}
+#      subnet-one: ${{ steps.vpc.outputs.subnet-one }}
+#      subnet-two: ${{ steps.vpc.outputs.subnet-two }}
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v2
+#      - name: Configure AWS credentials
+#        uses: aws-actions/configure-aws-credentials@master
+#        with:
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-region: ${{ secrets.AWS_REGION }}
+#
+#      - name: Retrieve default VPC ID and public subnets
+#        id: vpc
+#        run: |
+#          VPC_ID=`aws ec2 describe-vpcs --filters "Name=isDefault, Values=true" --query 'Vpcs[].VpcId' --output text`
+#          echo "vpc-id=$VPC_ID" >> "$GITHUB_OUTPUT"
+#
+#          SUBNET_1=`aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=default-for-az,Values=true" --query 'Subnets[0].SubnetId' --output text`
+#          echo "subnet-one=$SUBNET_1" >> "$GITHUB_OUTPUT"
+#
+#          SUBNET_2=`aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=default-for-az,Values=true" --query 'Subnets[1].SubnetId' --output text`
+#          echo "subnet-two=$SUBNET_2" >> "$GITHUB_OUTPUT"
+#
+#      - name: Deploy infrastructure with CloudFormation
+#        id: infrastructure-stack
+#        uses: aws-actions/aws-cloudformation-github-deploy@v1
+#        with:
+#          name: ${{ env.APP_NAME }}-infra
+#          template: cloudformation-templates/infrastructure.yml
+#          role-arn: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-cloudformation-stack-role
+#          no-fail-on-empty-changeset: "1"
+#          parameter-overrides: >-
+#            EnvironmentName=${{ env.ENV_NAME }},
+#            VPC=${{ steps.vpc.outputs.vpc-id }},
+#            PublicSubnetOne=${{ steps.vpc.outputs.subnet-one }},
+#            PublicSubnetTwo=${{ steps.vpc.outputs.subnet-two }}
 
   build-push:
     runs-on: ubuntu-latest
