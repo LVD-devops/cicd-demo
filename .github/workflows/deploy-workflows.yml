@@ -100,6 +100,18 @@ jobs:
         if: success()
         run: docker push ${{ steps.build-image.outputs.image }}
 
+      - name: Update ECS task definition JSON
+        env:
+          TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
+          TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
+          TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
+          IMAGE: ${{ steps.build-image.outputs.image }}
+        run: |
+          jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
+             .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
+             .containerDefinitions[0].image = "'${{ steps.build-image.outputs.image }}'" |
+             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./taskdef.json > ./taskdef_updated.json
+
       - name: Deploy updated container image via blue/green deployment to ECS service
         uses: silinternational/ecs-deploy@master
         with:
@@ -113,8 +125,12 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER_NAME }}
           image_cmd: '--image'
           image: ${{ steps.build-image.outputs.image }}
-          service_name_cmd: '--service-name'
-          service_name: ${{ env.ECS_SERVICE_NAME }}
+#          service_name_cmd: '--service-name'
+#          service_name: ${{ env.ECS_SERVICE_NAME }}
+          task_definition_cmd: '--task-definition'
+          task_definition: ${{ env.ECS_TASK_DEFINITION }}
+          task_definition_file_cmd: '--task-definition'
+          task_definition_file: 'taskdef_updated.json'
           wait_for_success_cmd: '--wait-for-success'
           wait_for_success: true
       #
