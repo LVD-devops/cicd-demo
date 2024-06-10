@@ -1,10 +1,10 @@
 {
-  "family": "",
+  "family": "${ECS_TASK_DEFINITION}",
   "networkMode": "awsvpc",
   "containerDefinitions": [
     {
-      "name": "",
-      "image": "",
+      "name": "${ECS_CONTAINER_NAME}",
+      "image": "${ECS_IMAGE}",
       "cpu": 256,
       "memory": 512,
       "essential": true,
@@ -25,5 +25,5 @@
     "cpuArchitecture": "X86_64",
     "operatingSystemFamily": "LINUX"
   },
-  "executionRoleArn": ""
+  "executionRoleArn": "${ECS_TASK_EXECUTE_ROLE}"
 }

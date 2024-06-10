@@ -1,29 +1,16 @@
 {
-  "family": "",
+  "launchType": "FARGATE",
+  "desiredCount": 1,
   "networkMode": "awsvpc",
-  "containerDefinitions": [
-    {
-      "name": "",
-      "image": "",
-      "cpu": 256,
-      "memory": 512,
-      "essential": true,
-      "portMappings": [
-        {
-          "containerPort": 80,
-          "hostPort": 80,
-          "protocol": "tcp",
-          "appProtocol": "http"
-        }
-      ]
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "${SUBNET_ONE}"
+      ],
+      "securityGroups": [
+        "${SG_ONE}"
+      ],
+      "assignPublicIp": "ENABLED"
     }
-  ],
-  "requiresCompatibilities": ["FARGATE"],
-  "cpu": "256",
-  "memory": "512",
-  "runtimePlatform": {
-    "cpuArchitecture": "X86_64",
-    "operatingSystemFamily": "LINUX"
-  },
-  "executionRoleArn": ""
+  }
 }

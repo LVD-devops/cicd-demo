@@ -1,0 +1,18 @@
+version: 1
+task_definition:
+  ecs_network_mode: awsvpc
+  task_execution_role: "arn:aws:iam::533267282741:role/ecsTaskExecutionRole"
+  task_size:
+    cpu_limit: 256
+    mem_limit: 512
+  services:
+    cicd-demo-ecs-service:
+      essential: true
+run_params:
+  network_configuration:
+    awsvpc_configuration:
+      subnets:
+        - subnet-0297559d173f9ebf1
+      security_groups:
+        - sg-021856a11cba5d951
+      assign_public_ip: ENABLED
