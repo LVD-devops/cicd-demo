@@ -1,4 +1,6 @@
-name: Main Deploy Aws Ecs Workflow
+name: Deploy Aws Ecs Workflow
+run-name: Deploy to ${{ inputs.environment }} with branch ${{ github.ref_name }} by @${{ github.actor }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -23,7 +25,6 @@ env:
 
   APP_NAME: ${{ github.event.repository.name }}-app
 
-run-name: Deploy to ${{ inputs.environment }} with branch ${{ github.ref_name }} by @${{ github.actor }}
 jobs:
   build-infra:
     runs-on: ubuntu-latest
@@ -186,10 +187,12 @@ jobs:
           envsubst < service-definition.tpl.json > service-definition.json
           envsubst < ecspresso.tpl.yml > ecspresso.yml
 
-      - name: Upload AWS credentials artifact
+      - name: Upload ecs files artifact
         uses: actions/upload-artifact@v4
         with:
           name: ecs-artifact-${{ inputs.environment }}
+          overwrite: true
+          retention-days: 1
           path: |
             task-definition.json
             service-definition.json
@@ -214,7 +217,7 @@ jobs:
         with:
           version: v2.3.3
 
-      - name: Download AWS credentials artifact
+      - name: Download ecs files artifact
         uses: actions/download-artifact@v4
         with:
           name: ecs-artifact-${{ inputs.environment }}
@@ -264,7 +267,7 @@ jobs:
       - name: Dump matrix context
         env:
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
-        run: echo "$MATRIX_CONTEXT"`
+        run: echo "$MATRIX_CONTEXT"
 
       - name: Logout of Amazon ECR
         if: always()
