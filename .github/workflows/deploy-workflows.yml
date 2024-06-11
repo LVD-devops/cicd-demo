@@ -55,6 +55,13 @@ jobs:
         if: ${{ inputs.create_vpc }}
         run: terraform apply -var "aws_region=${{ secrets.AWS_REGION }}" -var "app_name=${{ github.event.repository.name }}" -auto-approve
 
+      - name: Show output terraform
+        if: ${{ inputs.create_vpc }}
+        run: |
+          terraform output -raw vpc_id
+          terraform output -raw public_subnet_id
+          terraform output -raw security_group_id
+
       - name: Save Terraform outputs
         id: vpc_tf
         if: ${{ inputs.create_vpc }}
