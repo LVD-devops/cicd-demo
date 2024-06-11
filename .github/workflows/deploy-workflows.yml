@@ -82,6 +82,7 @@ jobs:
         run: |
           aws iam get-role --role-name ${{ env.ECS_TASK_EXECUTE_ROLE }} --region ${{ secrets.AWS_REGION }} || \
           aws iam create-role --role-name ${{ env.ECS_TASK_EXECUTE_ROLE }} --assume-role-policy-document  file://ecs-policy.json --region ${{ secrets.AWS_REGION }}
+          aws iam attach-role-policy --role-name ${{ env.ECS_TASK_EXECUTE_ROLE }} --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
   build-push:
     runs-on: ubuntu-latest
