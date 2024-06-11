@@ -63,12 +63,6 @@ jobs:
           echo "PUBLIC_SUBNET_ID=$(terraform output -raw public_subnet_id)" >> $GITHUB_OUTPUT
           echo "SECURITY_GROUP_ID=$(terraform output -raw security_group_id)" >> $GITHUB_OUTPUT
 
-      # @TODO remove block
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson($GITHUB_OUTPUT) }}
-        run: echo "$GITHUB_CONTEXT"
-
       - name: Create ECR repository if it does not exist
         run: |
           aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} --region ${{ secrets.AWS_REGION }} || \
@@ -84,6 +78,19 @@ jobs:
           aws iam get-role --role-name ${{ env.ECS_TASK_EXECUTE_ROLE }} --region ${{ secrets.AWS_REGION }} || \
           aws iam create-role --role-name ${{ env.ECS_TASK_EXECUTE_ROLE }} --assume-role-policy-document  file://ecs-policy.json --region ${{ secrets.AWS_REGION }}
           aws iam attach-role-policy --role-name ${{ env.ECS_TASK_EXECUTE_ROLE }} --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
 
   build-push:
     runs-on: ubuntu-latest
