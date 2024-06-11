@@ -24,6 +24,5 @@
   "runtimePlatform": {
     "cpuArchitecture": "X86_64",
     "operatingSystemFamily": "LINUX"
-  },
-  "executionRoleArn": "${ECS_TASK_EXECUTE_ROLE}"
+  }
 }

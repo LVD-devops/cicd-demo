@@ -1,14 +1,13 @@
 {
   "launchType": "FARGATE",
   "desiredCount": 1,
-  "networkMode": "awsvpc",
   "networkConfiguration": {
     "awsvpcConfiguration": {
       "subnets": [
-        "${SUBNET_ONE}"
+        "${ECS_PUB_SUBNETS}"
       ],
       "securityGroups": [
-        "${SG_ONE}"
+        "${ECS_SECURITY_GROUP}"
       ],
       "assignPublicIp": "ENABLED"
     }

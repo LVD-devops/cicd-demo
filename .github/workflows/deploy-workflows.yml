@@ -13,33 +13,35 @@ on:
     branches:
       - test
 env:
-  ECR_REPOSITORY: cicd-demo-repo
-  ECS_CLUSTER_NAME: cicd-demo-ecs-cluster
-  ECS_SERVICE_NAME: cicd-demo-ecs-service
-  ECS_TASK_DEFINITION: cicd-demo-task-definition
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'cicd-demo-repo' }}
+  ECS_CLUSTER_NAME: ${{ vars.ECS_CLUSTER_NAME || 'cicd-demo-ecs-cluster' }}
+  ECS_SERVICE_NAME: ${{ vars.ECS_SERVICE_NAME || 'cicd-demo-ecs-service' }}
+  ECS_TASK_DEFINITION: ${{ vars.ECS_TASK_DEFINITION || 'cicd-demo-task-definition' }}
+  ECS_CONTAINER_NAME: ${{ vars.ECS_CONTAINER_NAME || 'cicd-demo-ecs-container' }}
   ECS_TASK_EXECUTE_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole
-  ECS_CONTAINER_NAME: cicd-demo-ecs-container
-  APP_NAME: cicd-demo-app
+  ECS_PUB_SUBNETS: ${{ vars.ECS_PUB_SUBNETS || ' ' }} #Multiple subnet are separate by comma, such as "subnet-xxx,subnet-xxx,..."
+  ECS_SECURITY_GROUP: ${{ vars.ECS_SECURITY_GROUP || ' ' }}
+  ECS_VPC_ID: ${{ vars.ECS_VPC_ID || ' ' }}
+  ECS_CREATE_NEW_VPC: ${{ vars.ECS_CREATE_NEW_VPC || 'false' }}
+
+  APP_NAME: ${{ github.event.repository.name }}-app
   ENV_NAME: Develop #${{ inputs.environment }}
 
 jobs:
-#  build-infra:
-#    runs-on: ubuntu-latest
-#    environment: Develop
-#    outputs:
-#      vpc-id: ${{ steps.vpc.outputs.vpc-id }}
-#      subnet-one: ${{ steps.vpc.outputs.subnet-one }}
-#      subnet-two: ${{ steps.vpc.outputs.subnet-two }}
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v2
-#      - name: Configure AWS credentials
-#        uses: aws-actions/configure-aws-credentials@master
-#        with:
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          aws-region: ${{ secrets.AWS_REGION }}
-#
+  build-infra:
+    runs-on: ubuntu-latest
+    environment: Develop
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
 #      - name: Retrieve default VPC ID and public subnets
 #        id: vpc
 #        run: |
@@ -66,12 +68,19 @@ jobs:
 #            PublicSubnetOne=${{ steps.vpc.outputs.subnet-one }},
 #            PublicSubnetTwo=${{ steps.vpc.outputs.subnet-two }}
 
+      - name: Create ECR repository if it does not exist
+        run: |
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} --region${{ secrets.AWS_REGION }} || \
+          aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }}
+
+      - name: Create ECS cluster if it does not exist
+        run: |
+          aws ecs create-cluster --cluster-name ${{ env.ECS_CLUSTER_NAME }} --region${{ secrets.AWS_REGION }} || \
+          echo "Cluster ${{ env.ECS_CLUSTER_NAME }} already exists."
+
   build-push:
     runs-on: ubuntu-latest
     environment: Develop
-    outputs:
-      ecs-image: ${{ steps.build-image.outputs.image }}
-      ecs-registry: ${{ steps.ecr-login.outputs.registry }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -92,16 +101,6 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Create ECR repository if it does not exist
-        run: |
-          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} || \
-          aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }}
-
-      - name: Create ECS cluster if it does not exist
-        run: |
-          aws ecs create-cluster --cluster-name ${{ env.ECS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }} || \
-          echo "Cluster ${{ env.ECS_CLUSTER_NAME }} already exists."
-
       #      - name: Build, tag, and push image to Amazon ECR
       #        id: build-image
       #        env:
@@ -120,8 +119,6 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "ECS_REGISTRY=$ECR_REGISTRY" >> $GITHUB_ENV
           echo "ECS_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
       #
       #      - name: Scan image with Trivy
@@ -141,19 +138,19 @@ jobs:
 
       - name: Push to ECR
         if: success()
-        run: docker push ${{ steps.build-image.outputs.image }}
-
-      - name: Update ECS task definition JSON
-        env:
-          TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
-          TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
-          TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
-          IMAGE: ${{ steps.build-image.outputs.image }}
-        run: |
-          jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
-             .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
-             .containerDefinitions[0].image = "'${{ steps.build-image.outputs.image }}'" |
-             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./taskdef.json > ./taskdef_updated.json
+        run: docker push ${{ env.ECS_IMAGE }}
+#
+#      - name: Update ECS task definition JSON
+#        env:
+#          TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
+#          TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
+#          TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
+#          IMAGE: ${{ steps.build-image.outputs.image }}
+#        run: |
+#          jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
+#             .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
+#             .containerDefinitions[0].image = "'${{ steps.build-image.outputs.image }}'" |
+#             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./taskdef.json > ./taskdef_updated.json
 
 #      - name: Deploy updated container image via blue/green deployment to ECS service
 #        uses: silinternational/ecs-deploy@master
@@ -189,8 +186,6 @@ jobs:
       #             .containerDefinitions[0].image = "'${{ steps.build-image.outputs.image }}'" |
       #             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./ecs/create-task-definition.json > ./ecs/create-task-definition-updated.json
       #
-      - name: Check content task definition file
-        run:  cat taskdef_updated.json
 
 #      - name: Register ECS Task Definition
 #        id: task-def
@@ -220,14 +215,16 @@ jobs:
 #          cluster: ${{ env.ECS_CLUSTER_NAME }}
 #          wait-for-service-stability: true
 
+      - name: Substitute environment variables in file config
+        run: |
+          envsubst < task-definition.tpl.json > task-definition.json
+          envsubst < service-definition.tpl.json > service-definition.json
+          envsubst < ecspresso.tpl.yml > ecspresso.yml
+
       - name: Download ecspresso
         uses: kayac/ecspresso@v2
         with:
           version: v2.3.3
-
-      - name: Substitute environment variables in ecspresso config
-        run: |
-          envsubst < ecspresso.template.yml > ecspresso.yml
 
 #      - name: Update ECS task definition JSON
 #        env:
@@ -244,14 +241,15 @@ jobs:
       - name: Show ecspresso.yml
         run: |
           cat ecspresso.yml
-          cat taskdef_updated.json
+          cat task-definition.json
+          cat service-definition.json
 
       - name: Deploy to ECS service
         run: ecspresso deploy --config ecspresso.yml
 
       - name: Logout of Amazon ECR
         if: always()
-        run: docker logout ${{ env.ECR_REGISTRY }}
+        run: docker logout ${{ steps.ecr-login.outputs.registry }}
 
 #  deploy:
 #    runs-on: ubuntu-latest
