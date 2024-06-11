@@ -217,6 +217,7 @@ jobs:
 
   clear-data:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'dev' }}
     needs: deploy
     steps:
       - name: Configure AWS credentials
