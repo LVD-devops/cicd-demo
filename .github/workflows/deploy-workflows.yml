@@ -6,7 +6,7 @@ on:
         description: 'Environment to run:'
         type: environment
         required: true
-        default: 'Develop'
+        default: 'dev'
 
 env:
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || github.event.repository.name }}-ecr-${{ inputs.environment }}
@@ -22,13 +22,12 @@ env:
   ECS_CREATE_NEW_VPC: ${{ vars.ECS_CREATE_NEW_VPC || 'false' }}
 
   APP_NAME: ${{ github.event.repository.name }}-app
-  ENV_NAME: ${{ inputs.environment || 'Develop' }}
 
 run-name: Deploy to ${{ inputs.environment }} with branch ${{ github.ref_name }} by @${{ github.actor }}
 jobs:
   build-infra:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'Develop' }}
+    environment: ${{ inputs.environment || 'dev' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
