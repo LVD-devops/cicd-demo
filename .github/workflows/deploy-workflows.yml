@@ -46,6 +46,8 @@ jobs:
       - name: Setup Terraform
         if: ${{ inputs.create_vpc }}
         uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_wrapper: false
 
       - name: Terraform Init
         if: ${{ inputs.create_vpc }}
