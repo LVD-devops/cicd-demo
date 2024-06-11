@@ -1,23 +1,38 @@
 provider "aws" {
   region = var.aws_region
+  app_name = var.app_name
 }
 
 variable "aws_region" {
   description = "The AWS region to deploy to"
 }
 
+variable "app_name" {
+  description = "The name of application"
+}
+
+
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
+  tags = {
+    Name = "${var.app_name}-vpc"
+  }
 }
 
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
+  tags = {
+    Name = "${var.app_name}-igw"
+  }
 }
 
 resource "aws_subnet" "public" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.1.0/24"
   map_public_ip_on_launch = true
+  tags = {
+    Name = "${var.app_name}-subnet-public"
+  }
 }
 
 resource "aws_route_table" "public" {
@@ -26,6 +41,10 @@ resource "aws_route_table" "public" {
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.main.id
+  }
+
+  tags = {
+    Name = "${var.app_name}-rtb-public"
   }
 }
 
@@ -50,14 +69,10 @@ resource "aws_security_group" "main" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-}
 
-resource "aws_ecr_repository" "main" {
-  name = "laravel-app"
-}
-
-resource "aws_ecs_cluster" "main" {
-  name = "laravel-cluster"
+  tags = {
+    Name = "${var.app_name}-default-sg"
+  }
 }
 
 
