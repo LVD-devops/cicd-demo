@@ -5,14 +5,14 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to run:'
+        description: "Environment to run:"
         type: environment
         required: true
         default: 'dev'
       create-vpc:
         type: boolean
         default: false
-        description: 'Create new VPC (subnet, security group,..) if you haven\'t'
+        description: "Create new VPC (subnet, security group,..) if you haven't"
 env:
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || github.event.repository.name }}-ecr-${{ inputs.environment }}
   ECS_CLUSTER_NAME: ${{ vars.ECS_CLUSTER_NAME || github.event.repository.name }}-cluster-${{ inputs.environment }}
