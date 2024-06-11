@@ -18,7 +18,7 @@ env:
   ECS_SERVICE_NAME: ${{ vars.ECS_SERVICE_NAME || 'cicd-demo-ecs-service' }}
   ECS_TASK_DEFINITION: ${{ vars.ECS_TASK_DEFINITION || 'cicd-demo-task-definition' }}
   ECS_CONTAINER_NAME: ${{ vars.ECS_CONTAINER_NAME || 'cicd-demo-ecs-container' }}
-  ECS_TASK_EXECUTE_ROLE: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole
+  ECS_TASK_EXECUTE_ROLE: ${{ vars.ECS_TASK_EXECUTE_ROLE || 'ecsTaskExecutionRole' }}
   ECS_PUB_SUBNETS: ${{ vars.ECS_PUB_SUBNETS || ' ' }} #Multiple subnet are separate by comma, such as "subnet-xxx,subnet-xxx,..."
   ECS_SECURITY_GROUP: ${{ vars.ECS_SECURITY_GROUP || ' ' }}
   ECS_VPC_ID: ${{ vars.ECS_VPC_ID || ' ' }}
@@ -78,6 +78,11 @@ jobs:
           aws ecs create-cluster --cluster-name ${{ env.ECS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }} || \
           echo "Cluster ${{ env.ECS_CLUSTER_NAME }} already exists."
 
+      - name: Create role execute task if it does not exist
+        run: |
+          aws iam get-role --role-name ${{ env.ECS_TASK_EXECUTE_ROLE }} --region ${{ secrets.AWS_REGION }} || \
+          aws iam create-role --role-name ${{ env.ECS_TASK_EXECUTE_ROLE }} --assume-role-policy-document  file://ecs-policy.json --region ${{ secrets.AWS_REGION }}
+
   build-push:
     runs-on: ubuntu-latest
     needs: build-infra
@@ -92,6 +97,7 @@ jobs:
           node-version: 'v18.20.x'
 
       - name: Configure AWS credentials
+        id: creds
         uses: aws-actions/configure-aws-credentials@master
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -118,9 +124,11 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
+          AWS_ACCOUNT_ID: ${{ steps.creds.outputs.aws-account-id }}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           echo "ECS_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+          echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
       #
       #      - name: Scan image with Trivy
       #        uses: aquasecurity/trivy-action@master
