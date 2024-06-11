@@ -9,7 +9,7 @@ on:
         type: environment
         required: true
         default: 'dev'
-      create-vpc:
+      create_vpc:
         type: boolean
         default: false
         description: "Create new VPC (subnet, security group,..) if you haven't"
@@ -44,23 +44,23 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: check echo
-        run: echo ${{ inputs.create-vpc }}
+        run: echo ${{ inputs.create_vpc }}
 
       - name: Setup Terraform
-        if: ${{ inputs.create-vpc == 'true' }}
+        if: ${{ inputs.create_vpc == 'true' }}
         uses: hashicorp/setup-terraform@v1
 
       - name: Terraform Init
-        if: ${{ inputs.create-vpc == 'true' }}
+        if: ${{ inputs.create_vpc == 'true' }}
         run: terraform init
 
       - name: Terraform Apply
-        if: ${{ inputs.create-vpc == 'true' }}
+        if: ${{ inputs.create_vpc == 'true' }}
         run: terraform apply -var "aws_region=${{ secrets.AWS_REGION }}" -auto-approve
 
       - name: Save Terraform outputs
         id: vpc_tf
-        if: ${{ inputs.create-vpc == 'true' }}
+        if: ${{ inputs.create_vpc == 'true' }}
         run: |
           echo "VPC_ID=$(terraform output -chdir=terraform -raw vpc_id)" >> $GITHUB_OUTPUT
           echo "PUBLIC_SUBNET_ID=$(terraform output -raw public_subnet_id)" >> $GITHUB_OUTPUT
