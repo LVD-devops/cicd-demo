@@ -59,9 +59,9 @@ jobs:
         id: vpc_tf
         if: ${{ inputs.create_vpc }}
         run: |
-          echo "VPC_ID=$(terraform output vpc_id)" >> $GITHUB_OUTPUT
-          echo "PUBLIC_SUBNET_ID=$(terraform output public_subnet_id)" >> $GITHUB_OUTPUT
-          echo "SECURITY_GROUP_ID=$(terraform output security_group_id)" >> $GITHUB_OUTPUT
+          echo "VPC_ID=$(terraform output -raw vpc_id)" >> $GITHUB_OUTPUT
+          echo "PUBLIC_SUBNET_ID=$(terraform output -raw public_subnet_id)" >> $GITHUB_OUTPUT
+          echo "SECURITY_GROUP_ID=$(terraform output -raw security_group_id)" >> $GITHUB_OUTPUT
 
       - name: Create ECR repository if it does not exist
         run: |
