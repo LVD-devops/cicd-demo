@@ -236,3 +236,15 @@ jobs:
       - name: Logout of Amazon ECR
         if: always()
         run: docker logout ${{ needs.build-push.steps.ecr-login.outputs.registry }}
+
+      - name: Clear AWS credentials
+        if: success()
+        run: |
+          unset AWS_ACCESS_KEY_ID
+          unset AWS_SECRET_ACCESS_KEY
+          unset AWS_SESSION_TOKEN
+
+      - name: echo env
+        run: |
+          echo ${{ secrets.AWS_ACCESS_KEY_ID }}
+          echo ${{ secrets.AWS_ACCOUNT_ID }}
