@@ -43,6 +43,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: check echo
+        run: echo ${{ inputs.create-vpc }}
+
       - name: Setup Terraform
         if: ${{ inputs.create-vpc == 'true' }}
         uses: hashicorp/setup-terraform@v1
