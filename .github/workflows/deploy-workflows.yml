@@ -27,7 +27,7 @@ env:
 jobs:
   build-infra:
     runs-on: ubuntu-latest
-    environment: Develop
+    environment: ${{ github.event.inputs.environment }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
