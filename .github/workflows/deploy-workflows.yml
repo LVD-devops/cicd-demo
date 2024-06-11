@@ -9,7 +9,10 @@ on:
         type: environment
         required: true
         default: 'dev'
-
+      create-vpc:
+        type: boolean
+        default: false
+        description: 'Create new VPC (subnet, security group,..) if you haven't'
 env:
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || github.event.repository.name }}-ecr-${{ inputs.environment }}
   ECS_CLUSTER_NAME: ${{ vars.ECS_CLUSTER_NAME || github.event.repository.name }}-cluster-${{ inputs.environment }}
@@ -31,7 +34,7 @@ jobs:
     environment: ${{ inputs.environment || 'dev' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@master
@@ -40,31 +43,31 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-#      - name: Retrieve default VPC ID and public subnets
-#        id: vpc
-#        run: |
-#          VPC_ID=`aws ec2 describe-vpcs --filters "Name=isDefault, Values=true" --query 'Vpcs[].VpcId' --output text`
-#          echo "vpc-id=$VPC_ID" >> "$GITHUB_OUTPUT"
-#
-#          SUBNET_1=`aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=default-for-az,Values=true" --query 'Subnets[0].SubnetId' --output text`
-#          echo "subnet-one=$SUBNET_1" >> "$GITHUB_OUTPUT"
-#
-#          SUBNET_2=`aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=default-for-az,Values=true" --query 'Subnets[1].SubnetId' --output text`
-#          echo "subnet-two=$SUBNET_2" >> "$GITHUB_OUTPUT"
-#
-#      - name: Deploy infrastructure with CloudFormation
-#        id: infrastructure-stack
-#        uses: aws-actions/aws-cloudformation-github-deploy@v1
-#        with:
-#          name: ${{ env.APP_NAME }}-infra
-#          template: cloudformation-templates/infrastructure.yml
-#          role-arn: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-cloudformation-stack-role
-#          no-fail-on-empty-changeset: "1"
-#          parameter-overrides: >-
-#            EnvironmentName=${{ env.ENV_NAME }},
-#            VPC=${{ steps.vpc.outputs.vpc-id }},
-#            PublicSubnetOne=${{ steps.vpc.outputs.subnet-one }},
-#            PublicSubnetTwo=${{ steps.vpc.outputs.subnet-two }}
+      - name: Setup Terraform
+        if: ${{ inputs.create-vpc == 'true' }}
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Terraform Init
+        if: ${{ inputs.create-vpc == 'true' }}
+        run: terraform init
+
+      - name: Terraform Apply
+        if: ${{ inputs.create-vpc == 'true' }}
+        run: terraform apply -var "aws_region=${{ secrets.AWS_REGION }}" -auto-approve
+
+      - name: Save Terraform outputs
+        id: vpc_tf
+        if: ${{ inputs.create-vpc == 'true' }}
+        run: |
+          echo "VPC_ID=$(terraform output -chdir=terraform -raw vpc_id)" >> $GITHUB_OUTPUT
+          echo "PUBLIC_SUBNET_ID=$(terraform output -raw public_subnet_id)" >> $GITHUB_OUTPUT
+          echo "SECURITY_GROUP_ID=$(terraform output -raw security_group_id)" >> $GITHUB_OUTPUT
+
+      # @TODO remove block
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson($GITHUB_OUTPUT) }}
+        run: echo "$GITHUB_CONTEXT"
 
       - name: Create ECR repository if it does not exist
         run: |
@@ -90,7 +93,7 @@ jobs:
       ecr-registry: ${{ steps.ecr-login.outputs.registry }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -115,11 +118,9 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
-          AWS_ACCOUNT_ID: ${{ steps.creds.outputs.aws-account-id }}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           echo "ECS_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
-          echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
   
       - name: Scan security image with Trivy
         uses: aquasecurity/trivy-action@master
@@ -140,52 +141,15 @@ jobs:
         if: success()
         run: docker push ${{ env.ECS_IMAGE }}
 
-      #      - name: Update ECS task definition JSON
-      #        env:
-      #          TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
-      #          TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
-      #          TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
-      #          IMAGE: ${{ steps.build-image.outputs.image }}
-      #        run: |
-      #          jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
-      #             .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
-      #             .containerDefinitions[0].image = "'${{ steps.build-image.outputs.image }}'" |
-      #             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./ecs/create-task-definition.json > ./ecs/create-task-definition-updated.json
-      #
-
-#      - name: Register ECS Task Definition
-#        id: task-def
-#        uses: aws-actions/amazon-ecs-render-task-definition@v1
-#        with:
-#          task-definition: taskdef_updated.json
-#          container-name: ${{ env.ECS_CONTAINER_NAME }}
-#          image: ${{ steps.build-image.outputs.image }}
-
-#      - name: Update ECS task definition JSON
-#        env:
-#          TASK_FAMILY: ${{ env.ECS_TASK_DEFINITION }}
-#          TASK_EXECUTE_ROLE: ${{ env.ECS_TASK_EXECUTE_ROLE }}
-#          TASK_CONTAINER_NAME: ${{ env.ECS_CONTAINER_NAME }}
-#          IMAGE: ${{ steps.build-image.outputs.image }}
-#        run: |
-#          jq '.family = "'${{ env.ECS_TASK_DEFINITION }}'" |
-#             .containerDefinitions[0].name = "'${{ env.ECS_CONTAINER_NAME }}'" |
-#             .containerDefinitions[0].image = "'${{ steps.build-image.outputs.image }}'" |
-#             .executionRoleArn = "'${{ env.ECS_TASK_EXECUTE_ROLE }}'"' ./ecs/create-task-definition.json > ./ecs/create-task-definition-updated.json
-
-#      - name: Deploy to Amazon ECS service
-#        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-#        with:
-#          task-definition: ${{ steps.task-def.outputs.task-definition }}
-#          service: ${{ env.ECS_SERVICE_NAME }}
-#          cluster: ${{ env.ECS_CLUSTER_NAME }}
-#          wait-for-service-stability: true
-
       - name: Substitute environment variables in file config
         run: |
           envsubst < task-definition.tpl.json > task-definition.json
           envsubst < service-definition.tpl.json > service-definition.json
           envsubst < ecspresso.tpl.yml > ecspresso.yml
+        env:
+          ECS_PUB_SUBNETS: ${{ needs.build-infra.steps.vpc_tf.outputs.PUBLIC_SUBNET_ID || env.ECS_PUB_SUBNETS }}
+          ECS_SECURITY_GROUP: ${{ needs.build-infra.steps.vpc_tf.outputs.SECURITY_GROUP_ID || env.ECS_SECURITY_GROUP }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
       - name: Upload ecs files artifact
         uses: actions/upload-artifact@v4
@@ -203,7 +167,7 @@ jobs:
     environment: ${{ inputs.environment || 'dev' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@master
@@ -235,7 +199,7 @@ jobs:
   clear-data:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || 'dev' }}
-    needs: deploy
+    needs: [deploy, build-push]
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@master
@@ -271,4 +235,4 @@ jobs:
 
       - name: Logout of Amazon ECR
         if: always()
-        run: docker logout ${{ needs.deploy.needs.build-push.steps.ecr-login.outputs.registry }}
+        run: docker logout ${{ needs.build-push.steps.ecr-login.outputs.registry }}
