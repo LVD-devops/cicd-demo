@@ -43,24 +43,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: check echo
-        run: echo ${{ inputs.create_vpc }}
-
       - name: Setup Terraform
         if: ${{ inputs.create_vpc }}
         uses: hashicorp/setup-terraform@v1
 
       - name: Terraform Init
-        if: ${{ inputs.create_vpc == 'true' }}
+        if: ${{ inputs.create_vpc }}
         run: terraform init
 
       - name: Terraform Apply
-        if: ${{ inputs.create_vpc == 'true' }}
+        if: ${{ inputs.create_vpc }}
         run: terraform apply -var "aws_region=${{ secrets.AWS_REGION }}" -auto-approve
 
       - name: Save Terraform outputs
         id: vpc_tf
-        if: ${{ inputs.create_vpc == 'true' }}
+        if: ${{ inputs.create_vpc }}
         run: |
           echo "VPC_ID=$(terraform output -chdir=terraform -raw vpc_id)" >> $GITHUB_OUTPUT
           echo "PUBLIC_SUBNET_ID=$(terraform output -raw public_subnet_id)" >> $GITHUB_OUTPUT
