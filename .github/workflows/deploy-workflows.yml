@@ -47,7 +47,7 @@ jobs:
         run: echo ${{ inputs.create_vpc }}
 
       - name: Setup Terraform
-        if: ${{ inputs.create_vpc == 'true' }}
+        if: ${{ inputs.create_vpc }}
         uses: hashicorp/setup-terraform@v1
 
       - name: Terraform Init
