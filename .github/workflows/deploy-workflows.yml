@@ -186,6 +186,14 @@ jobs:
           envsubst < service-definition.tpl.json > service-definition.json
           envsubst < ecspresso.tpl.yml > ecspresso.yml
 
+      - name: Upload AWS credentials artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecs-artifact-${{ inputs.environment }}
+          path: |
+            task-definition.json
+            service-definition.json
+            ecspresso.yml
   deploy:
     runs-on: ubuntu-latest
     needs: build-push
@@ -205,6 +213,12 @@ jobs:
         uses: kayac/ecspresso@v2
         with:
           version: v2.3.3
+
+      - name: Download AWS credentials artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ecs-artifact-${{ inputs.environment }}
+          path: .
 
       - name: Show ecspresso.yml
         run: |
