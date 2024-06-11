@@ -80,6 +80,7 @@ jobs:
 
   build-push:
     runs-on: ubuntu-latest
+    needs: build-infra
     environment: Develop
     steps:
       - name: Checkout code
