@@ -8,20 +8,7 @@ on:
         type: environment
         required: true
         default: 'Develop'
-      is-create-vpc:
-        description: 'Create new VPC if you haven\'t:'
-        type: boolean
-        default: false
-      public-subnets:
-        description: 'Use public subnet:'
-        required: true
-        type: string
-        default: ${{ vars.ECS_PUB_SUBNETS }}
-      security-group:
-        description: 'Security group:'
-        required: true
-        type: string
-        default: ${{ vars.ECS_SECURITY_GROUP }}
+
 env:
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'cicd-demo-repo' }}
   ECS_CLUSTER_NAME: ${{ vars.ECS_CLUSTER_NAME || 'cicd-demo-ecs-cluster' }}
