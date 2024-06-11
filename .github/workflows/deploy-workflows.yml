@@ -1,5 +1,4 @@
 name: Main Deploy Aws Ecs Workflow
-
 on:
   workflow_dispatch:
     inputs:
@@ -22,12 +21,13 @@ env:
   ECS_CREATE_NEW_VPC: ${{ vars.ECS_CREATE_NEW_VPC || 'false' }}
 
   APP_NAME: ${{ github.event.repository.name }}-app
-  ENV_NAME: Develop #${{ inputs.environment }}
+  ENV_NAME: ${{ inputs.environment || 'Develop' }}
 
+run-name: Deploy to ${{ inputs.environment }} by @${{ github.actor }}
 jobs:
   build-infra:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
+    environment: ${{ inputs.environment || 'Develop' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
