@@ -1,4 +1,6 @@
 region: ${AWS_REGION} # or AWS_REGION environment variable
 cluster: ${ECS_CLUSTER_NAME}
-task_definition: taskdef_updated.json
+service: ${ECS_SERVICE_NAME}
+task_definition: task-definition.json
+service_definition: service-definition.json
 timeout: 5m # default 10m
