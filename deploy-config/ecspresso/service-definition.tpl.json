@@ -1,15 +1,24 @@
 {
   "launchType": "FARGATE",
   "desiredCount": 1,
+  "taskDefinition": "${ECS_TASK_DEFINITION}",
   "networkConfiguration": {
     "awsvpcConfiguration": {
       "subnets": [
-        "${ECS_PUB_SUBNETS}"
+        "${ECS_PUB_SUBNET1}",
+        "${ECS_PUB_SUBNET2}"
       ],
       "securityGroups": [
         "${ECS_SECURITY_GROUP}"
       ],
-      "assignPublicIp": "ENABLED"
+      "assignPublicIp": "DISABLED"
     }
-  }
+  },
+  "loadBalancers": [
+    {
+      "targetGroupArn": "$ECS_ALB_TARGET_GROUP_ARN",
+      "containerName": "$ECS_CONTAINER_NAME",
+      "containerPort": 80
+    }
+  ]
 }
