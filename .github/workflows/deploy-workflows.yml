@@ -59,17 +59,22 @@ jobs:
 
       - name: Terraform init and apply vpc
         if: ${{ inputs.create_vpc }}
-        id: vpc_tf
         working-directory: ./deploy-config/infra/network
         run: |
           terraform init
           terraform apply -var "aws_region=${{ secrets.AWS_REGION }}" -var "app_name=${{ github.event.repository.name }}" -auto-approve
+
+      - name: Terraform Output
+        id: vpc_tf
+        working-directory: ./deploy-config/infra/network
+        run: |
           echo "vpc_id=$(terraform output -raw vpc_id)" >> $GITHUB_OUTPUT
           echo "security_group_id=$(terraform output -raw ecs_security_group_id)" >> $GITHUB_OUTPUT
           echo "alb_target_group_arn=$(terraform output -raw alb_target_group_arn)" >> $GITHUB_OUTPUT
 
       - name: Terraform Output Public Subnets
         id: vpc_subnets_tf
+        working-directory: ./deploy-config/infra/network
         run: |
           public_subnets=$(terraform output -json public_subnets_id | jq -r '.[]')
           index=1
