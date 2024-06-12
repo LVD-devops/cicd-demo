@@ -1,5 +1,3 @@
-data "aws_availability_zones" "available" {}
-
 resource "aws_route53_zone" "main" {
   name = "zunlocal.com"
 }
