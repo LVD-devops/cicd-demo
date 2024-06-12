@@ -4,5 +4,4 @@ node_modules
 .gitignore
 vendor
 dist
-deploy-config
 .idea

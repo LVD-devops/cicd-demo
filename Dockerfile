@@ -2,7 +2,7 @@
 FROM php:8.1-apache
 RUN cd /etc/apache2/mods-enabled \
   && ln -s ../mods-available/rewrite.load
-COPY deploy-config/docker/000-default.conf /etc/apache2/sites-enabled/
+ADD ./deploy-config/docker/000-default.conf /etc/apache2/sites-enabled/
 #ADD php.ini /usr/local/etc/php/
 
 RUN apt-get update \
