@@ -1,5 +1,5 @@
 name: Deploy Aws Ecs Workflow
-run-name: Deploy to ${{ inputs.environment }} with branch ${{ github.ref_name }} by @${{ github.actor }}
+run-name: Deploy branch [${{ github.ref_name }}] to [${{ inputs.environment }}] by @${{ github.actor }}
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ on:
       create_vpc:
         type: boolean
         default: false
-        description: "Create new VPC (subnet, security group,..) if you haven't"
+        description: "Create new Network if you haven't"
 env:
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || github.event.repository.name }}-ecr-${{ inputs.environment }}
   ECS_CLUSTER_NAME: ${{ vars.ECS_CLUSTER_NAME || github.event.repository.name }}-cluster-${{ inputs.environment }}

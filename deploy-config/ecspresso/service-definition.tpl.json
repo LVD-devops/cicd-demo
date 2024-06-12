@@ -11,7 +11,7 @@
       "securityGroups": [
         "${ECS_SECURITY_GROUP}"
       ],
-      "assignPublicIp": "DISABLED"
+      "assignPublicIp": "ENABLED"
     }
   },
   "loadBalancers": [
