@@ -68,6 +68,7 @@ jobs:
         if: ${{ inputs.create_vpc }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+          ECS_VPC_ID_VAL: ${{ steps.vpc_tf.outputs.vpc_id }}
           ECS_PUB_SUBNETS_VAL: ${{ steps.vpc_tf.outputs.public_subnet_id }}
           ECS_SECURITY_GROUP_VAL: ${{ steps.vpc_tf.outputs.security_group_id }}
           REPOSITORY_URL: ${{ github.event.repository.url }}
@@ -76,13 +77,18 @@ jobs:
           curl -X PATCH \
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
+            $REPOSITORY_URL/environments/$REPOSITORY_ENV/variables/ECS_VPC_ID \
+            -d "{\"name\":\"ECS_VPC_ID\",\"value\":\"$ECS_VPC_ID_VAL\"}"
+          curl -X PATCH \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
             $REPOSITORY_URL/environments/$REPOSITORY_ENV/variables/ECS_PUB_SUBNETS \
-            -d '{"name":"ECS_PUB_SUBNETS","value":"$ECS_PUB_SUBNETS_VAL"}'
+            -d "{\"name\":\"ECS_PUB_SUBNETS\",\"value\":\"$ECS_PUB_SUBNETS_VAL\"}"
           curl -X PATCH \
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             $REPOSITORY_URL/environments/$REPOSITORY_ENV/variables/ECS_SECURITY_GROUP \
-            -d '{"name":"ECS_SECURITY_GROUP","value":"$ECS_SECURITY_GROUP_VAL"}'
+            -d "{\"name\":\"ECS_SECURITY_GROUP\",\"value\":\"$ECS_SECURITY_GROUP_VAL\"}"
 
       - name: Create ECR repository if it does not exist
         run: |
