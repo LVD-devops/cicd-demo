@@ -1,15 +1,3 @@
-provider "aws" {
-  region = var.aws_region
-}
-
-variable "aws_region" {
-  description = "The AWS region to deploy to"
-}
-
-variable "app_name" {
-  description = "The name of application"
-}
-
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
   tags = {
