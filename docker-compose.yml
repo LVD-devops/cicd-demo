@@ -1,0 +1,6 @@
+version: '3'
+services:
+  cicd-demo-ecs-service:
+    image: 533267282741.dkr.ecr.us-east-1.amazonaws.com/cicd-demo-repo:45c7e07c70d5322e7ad2c1a8482e602522ae4e25
+    ports:
+      - "80:80"

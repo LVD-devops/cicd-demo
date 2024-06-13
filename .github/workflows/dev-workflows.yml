@@ -1,0 +1,105 @@
+name: Deploy Aws Ecs Workflow 2
+run-name: Deploy branch ${{ github.ref_name }} to ${{ inputs.environment }} environment by @${{ github.actor }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run:"
+        type: environment
+        required: true
+        default: 'dev'
+      create_network:
+        type: boolean
+        default: false
+        description: "Create new Network (Load Balancing Network)"
+
+env:
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || github.event.repository.name }}-ecr-${{ inputs.environment }}
+  ECS_CLUSTER_NAME: ${{ vars.ECS_CLUSTER_NAME || github.event.repository.name }}-cluster-${{ inputs.environment }}
+  ECS_SERVICE_NAME: ${{ vars.ECS_SERVICE_NAME || github.event.repository.name }}-service-${{ inputs.environment }}
+  ECS_TASK_DEFINITION: ${{ vars.ECS_TASK_DEFINITION || github.event.repository.name }}-task-${{ inputs.environment }}
+  ECS_CONTAINER_NAME: ${{ vars.ECS_CONTAINER_NAME || github.event.repository.name }}-container-${{ inputs.environment }}
+
+  ECS_TASK_EXECUTE_ROLE: ${{ vars.ECS_TASK_EXECUTE_ROLE || 'ecsTaskExecutionRole' }}
+  ECS_PUB_SUBNET1: ${{ vars.ECS_PUB_SUBNET1 || ' ' }} #Multiple subnet are separate by comma, such as "subnet-xxx,subnet-xxx,..."
+  ECS_PUB_SUBNET2: ${{ vars.ECS_PUB_SUBNET2 || ' ' }} #Multiple subnet are separate by comma, such as "subnet-xxx,subnet-xxx,..."
+  ECS_SECURITY_GROUP: ${{ vars.ECS_SECURITY_GROUP || ' ' }}
+  ECS_VPC_ID: ${{ vars.ECS_VPC_ID || ' ' }}
+  ECS_ALB_TARGET_GROUP_ARN: ${{ vars.ECS_ALB_TARGET_GROUP_ARN || ' ' }}
+  ECS_CREATE_NEW_VPC: ${{ vars.ECS_CREATE_NEW_VPC || 'false' }}
+
+  APP_NAME: ${{ github.event.repository.name }}-app
+
+jobs:
+  build-infra:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'dev' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+  build-push:
+    runs-on: ubuntu-latest
+    needs: build-infra
+    environment: ${{ inputs.environment || 'dev' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 'v18.20.x'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-push
+    environment: ${{ inputs.environment || 'dev' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+  clear-data:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'dev' }}
+    needs: [deploy, build-push]
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Logout of Amazon ECR
+        if: always()
+        run: docker logout
+
+      - name: Clear AWS credentials
+        if: success()
+        run: |
+          unset AWS_ACCESS_KEY_ID
+          unset AWS_SECRET_ACCESS_KEY
+          unset AWS_SESSION_TOKEN

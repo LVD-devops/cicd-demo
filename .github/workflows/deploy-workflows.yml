@@ -1,45 +1,289 @@
-name: Manual Deploy
+name: Deploy Aws Ecs Workflow 1
+run-name: Deploy branch [${{ github.ref_name }}] to [${{ inputs.environment }}] by @${{ github.actor }}
 
 on:
   workflow_dispatch:
     inputs:
-      logLevel:
-        description: 'Log level'
-        required: true
-        default: 'warning'
-        type: choice
-        options:
-          - info
-          - warning
-          - debug
-      tags:
-        description: 'Test scenario tags'
-        required: false
-        type: boolean
       environment:
-        description: 'Environment to run tests against'
+        description: "Environment to run:"
         type: environment
         required: true
-        default: 'Test'
+        default: 'dev'
+      create_vpc:
+        type: boolean
+        default: false
+        description: "Create new Network if you haven't"
+env:
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || github.event.repository.name }}-ecr-${{ inputs.environment }}
+  ECS_CLUSTER_NAME: ${{ vars.ECS_CLUSTER_NAME || github.event.repository.name }}-cluster-${{ inputs.environment }}
+  ECS_SERVICE_NAME: ${{ vars.ECS_SERVICE_NAME || github.event.repository.name }}-service-${{ inputs.environment }}
+  ECS_TASK_DEFINITION: ${{ vars.ECS_TASK_DEFINITION || github.event.repository.name }}-task-${{ inputs.environment }}
+  ECS_CONTAINER_NAME: ${{ vars.ECS_CONTAINER_NAME || github.event.repository.name }}-container-${{ inputs.environment }}
+
+  ECS_TASK_EXECUTE_ROLE: ${{ vars.ECS_TASK_EXECUTE_ROLE || 'ecsTaskExecutionRole' }}
+  ECS_PUB_SUBNET1: ${{ vars.ECS_PUB_SUBNET1 || ' ' }} #Multiple subnet are separate by comma, such as "subnet-xxx,subnet-xxx,..."
+  ECS_PUB_SUBNET2: ${{ vars.ECS_PUB_SUBNET2 || ' ' }} #Multiple subnet are separate by comma, such as "subnet-xxx,subnet-xxx,..."
+  ECS_SECURITY_GROUP: ${{ vars.ECS_SECURITY_GROUP || ' ' }}
+  ECS_VPC_ID: ${{ vars.ECS_VPC_ID || ' ' }}
+  ECS_ALB_TARGET_GROUP_ARN: ${{ vars.ECS_ALB_TARGET_GROUP_ARN || ' ' }}
+  ECS_CREATE_NEW_VPC: ${{ vars.ECS_CREATE_NEW_VPC || 'false' }}
+
+  APP_NAME: ${{ github.event.repository.name }}-app
 
 jobs:
-  deploy:
+  build-infra:
     runs-on: ubuntu-latest
-
+    environment: ${{ inputs.environment || 'dev' }}
+    outputs:
+      vpc_id: ${{ steps.vpc_tf.outputs.vpc_id }}
+      alb_target_group_arn: ${{ steps.vpc_tf.outputs.alb_target_group_arn }}
+      security_group_id: ${{ steps.vpc_tf.outputs.security_group_id }}
+      public_subnet_id1: ${{ steps.vpc_subnets_tf.outputs.public_subnet_id1 }}
+      public_subnet_id2: ${{ steps.vpc_subnets_tf.outputs.public_subnet_id2 }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        if: ${{ inputs.create_vpc }}
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init and apply vpc
+        if: ${{ inputs.create_vpc }}
+        working-directory: ./deploy-config/infra/network
+        run: |
+          terraform init
+          terraform apply -var "aws_region=${{ secrets.AWS_REGION }}" -var "app_name=${{ github.event.repository.name }}" -auto-approve
+
+      - name: Terraform Output
+        id: vpc_tf
+        working-directory: ./deploy-config/infra/network
+        run: |
+          echo "vpc_id=$(terraform output -raw vpc_id)" >> $GITHUB_OUTPUT
+          echo "security_group_id=$(terraform output -raw ecs_security_group_id)" >> $GITHUB_OUTPUT
+          echo "alb_target_group_arn=$(terraform output -raw alb_target_group_arn)" >> $GITHUB_OUTPUT
+
+      - name: Terraform Output Public Subnets
+        id: vpc_subnets_tf
+        working-directory: ./deploy-config/infra/network
+        run: |
+          public_subnets=$(terraform output -json public_subnets_id | jq -r '.[]')
+          index=1
+          for subnet in $public_subnets; do
+            echo "public_subnet_id$index=$subnet" >> $GITHUB_OUTPUT
+            index=$((index + 1))
+          done
+
+      - name: Update variable for ${{ inputs.environment }}
+        if: ${{ inputs.create_vpc }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+          ECS_VPC_ID_VAL: ${{ steps.vpc_tf.outputs.vpc_id }}
+          ECS_SECURITY_GROUP_VAL: ${{ steps.vpc_tf.outputs.security_group_id }}
+          ECS_ALB_TARGET_GROUP_ARN_VAL: ${{ steps.vpc_tf.outputs.alb_target_group_arn }}
+          ECS_PUB_SUBNET1_VAL: ${{ steps.vpc_subnets_tf.outputs.public_subnet_id1 }}
+          ECS_PUB_SUBNET2_VAL: ${{ steps.vpc_subnets_tf.outputs.public_subnet_id2 }}
+          REPOSITORY_URL: ${{ github.event.repository.url }}
+          REPOSITORY_ENV: ${{ inputs.environment }}
+        run: |
+          curl -X PATCH \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            $REPOSITORY_URL/environments/$REPOSITORY_ENV/variables/ECS_VPC_ID \
+            -d "{\"name\":\"ECS_VPC_ID\",\"value\":\"$ECS_VPC_ID_VAL\"}"
+          curl -X PATCH \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            $REPOSITORY_URL/environments/$REPOSITORY_ENV/variables/ECS_PUB_SUBNET1 \
+            -d "{\"name\":\"ECS_PUB_SUBNET1\",\"value\":\"$ECS_PUB_SUBNET1_VAL\"}"
+          curl -X PATCH \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            $REPOSITORY_URL/environments/$REPOSITORY_ENV/variables/ECS_PUB_SUBNET2 \
+            -d "{\"name\":\"ECS_PUB_SUBNET2\",\"value\":\"$ECS_PUB_SUBNET2_VAL\"}"
+          curl -X PATCH \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            $REPOSITORY_URL/environments/$REPOSITORY_ENV/variables/ECS_SECURITY_GROUP \
+            -d "{\"name\":\"ECS_SECURITY_GROUP\",\"value\":\"$ECS_SECURITY_GROUP_VAL\"}"
+          curl -X PATCH \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            $REPOSITORY_URL/environments/$REPOSITORY_ENV/variables/ECS_ALB_TARGET_GROUP_ARN \
+            -d "{\"name\":\"ECS_ALB_TARGET_GROUP_ARN\",\"value\":\"$ECS_ALB_TARGET_GROUP_ARN_VAL\"}"
+
+      - name: Create ECR repository if it does not exist
+        run: |
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} --region ${{ secrets.AWS_REGION }} || \
+          aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }}
+
+      - name: Create ECS cluster if it does not exist
+        run: |
+          aws ecs create-cluster --cluster-name ${{ env.ECS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }} || \
+          echo "Cluster ${{ env.ECS_CLUSTER_NAME }} already exists."
+      
+      - name: Check if IAM Ecs Role exists
+        id: check_role
+        run: |
+          if aws iam get-role --role-name ${{ env.ECS_TASK_EXECUTE_ROLE }} --region ${{ secrets.AWS_REGION }}; then
+            echo "role_ecs_task_exists=true" >> $GITHUB_ENV
+          else
+            echo "role_ecs_task_exists=false" >> $GITHUB_ENV
+          fi
+
+      - name: Terraform Apply IAM (only if role does not exist)
+        if: env.role_ecs_task_exists == 'false'
+        working-directory: ./deploy-config/infra/iam
+        run: |
+          terraform init
+          terraform apply -var "aws_region=${{ secrets.AWS_REGION }}" -auto-approve
+
+#      - name: Create role execute task if it does not exist
+#        run: |
+#          aws iam get-role --role-name ${{ env.ECS_TASK_EXECUTE_ROLE }} --region ${{ secrets.AWS_REGION }} || \
+#          aws iam create-role --role-name ${{ env.ECS_TASK_EXECUTE_ROLE }} --assume-role-policy-document  file://ecs-policy.json --region ${{ secrets.AWS_REGION }}
+#          aws iam attach-role-policy --role-name ${{ env.ECS_TASK_EXECUTE_ROLE }} --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  build-push:
+    runs-on: ubuntu-latest
+    needs: build-infra
+    environment: ${{ inputs.environment || 'dev' }}
+    outputs:
+      ecr-registry: ${{ steps.ecr-login.outputs.registry }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
           node-version: 'v18.20.x'
 
-      - name: Remove package-lock.json
-        run: rm -f package-lock.json
+      - name: Configure AWS credentials
+        id: creds
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Compile TypeScript
-        run: npm run build
+      - name: Build Docker Image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          echo "ECS_IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+  
+      - name: Scan security image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.ECS_IMAGE }}
+          format: "table"
+          severity: "CRITICAL,HIGH"
+          exit-code: 0
+  
+      - name: Check Docker best practices with Dockle
+        uses: erzz/dockle-action@v1
+        with:
+          image: ${{ env.ECS_IMAGE }}
+          failure-threshold: fatal
+          exit-code: 0
+
+      - name: Push to ECR
+        if: success()
+        run: docker push ${{ env.ECS_IMAGE }}
+
+      - name: Substitute environment variables in file config
+        working-directory: ./deploy-config/ecspresso
+        run: |
+          envsubst < task-definition.tpl.json > task-definition.json
+          envsubst < service-definition.tpl.json > service-definition.json
+          envsubst < ecspresso.tpl.yml > ecspresso.yml
+        env:
+          ECS_PUB_SUBNET1: ${{ needs.build-infra.outputs.public_subnet_id1 || env.ECS_PUB_SUBNET1 }}
+          ECS_PUB_SUBNET2: ${{ needs.build-infra.outputs.public_subnet_id2 || env.ECS_PUB_SUBNET2 }}
+          ECS_SECURITY_GROUP: ${{ needs.build-infra.outputs.security_group_id || env.ECS_SECURITY_GROUP }}
+          ECS_ALB_TARGET_GROUP_ARN: ${{ needs.build-infra.outputs.alb_target_group_arn || env.ECS_ALB_TARGET_GROUP_ARN }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+      - name: Upload ecs files artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecs-artifact-${{ inputs.environment }}
+          overwrite: true
+          retention-days: 1
+          path: ./deploy-config/ecspresso/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-push
+    environment: ${{ inputs.environment || 'dev' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Download ecspresso
+        uses: kayac/ecspresso@v2
+        with:
+          version: v2.3.3
+
+      - name: Download ecs files artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ecs-artifact-${{ inputs.environment }}
+          path: .
+
+      - name: Show ecspresso.yml
+        run: |
+          cat ecspresso.yml
+          cat task-definition.json
+          cat service-definition.json
+
+      - name: Deploy to ECS service
+        run: ecspresso deploy --config ecspresso.yml --wait
+
+  clear-data:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'dev' }}
+    needs: [deploy, build-push]
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+         aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Logout of Amazon ECR
+        if: always()
+        run: docker logout ${{ needs.build-push.outputs.ecr-registry }}
+
+      - name: Clear AWS credentials
+        if: success()
+        run: |
+          unset AWS_ACCESS_KEY_ID
+          unset AWS_SECRET_ACCESS_KEY
+          unset AWS_SESSION_TOKEN
