@@ -54,5 +54,4 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Test
-      run: |
-         run: echo "RAND_STR=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 3 | head -n 1)" >> $GITHUB_ENV
+      run: echo "RANDOM_STRING=$(openssl rand -base64 3 | tr -dc 'a-zA-Z0-9' | cut -c -3)" >> $GITHUB_ENV
