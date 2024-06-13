@@ -15,7 +15,8 @@ run-name: Deploy branch ${{ github.ref_name }} to ${{ inputs.environment }} envi
 #        description: "Create new Network (Load Balancing Network)"
 on:
   push:
-    - dev
+    branches:
+      - dev
 
 env:
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || github.event.repository.name }}-ecr-${{ inputs.environment }}
