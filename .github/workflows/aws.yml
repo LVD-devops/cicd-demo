@@ -54,7 +54,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Test
-      run: echo "RANDOM_STRING=$(openssl rand -base64 3 | tr -dc 'a-zA-Z0-9' | cut -c -3)" >> $GITHUB_ENV
+      run: echo "RANDOM_STRING=$(openssl rand -base64 3 | tr -dc 'a-z0-9' | cut -c -3)" >> $GITHUB_ENV
 
     - name: Display random string
       run: |
