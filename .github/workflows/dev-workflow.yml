@@ -50,8 +50,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-infra
     environment: ${{ inputs.environment || 'dev' }}
-    outputs:
-      ecr-registry: ${{ steps.ecr-login.outputs.registry }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -97,7 +95,7 @@ jobs:
 
       - name: Logout of Amazon ECR
         if: always()
-        run: docker logout ${{ needs.build-push.outputs.ecr-registry }}
+        run: docker logout
 
       - name: Clear AWS credentials
         if: success()
