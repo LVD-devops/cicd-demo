@@ -55,4 +55,4 @@ jobs:
 
     - name: Test
       run: |
-        uuidgen
+         run: echo "RAND_STR=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 3 | head -n 1)" >> $GITHUB_ENV
