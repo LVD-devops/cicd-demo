@@ -59,7 +59,7 @@ jobs:
           terraform_wrapper: false
 
       - name: Generate random string id
-        run: echo "RAND_ID=$(openssl rand -base64 3 | tr -dc 'a-z0-9' | cut -c -3)" >> $GITHUB_ENV
+        run: echo "RAND_ID=$(openssl rand -base64 20 | tr -dc 'a-z0-9' | cut -c -3)" >> $GITHUB_ENV
 
       - name: Terraform init and apply vpc
         if: ${{ inputs.create_network }}
@@ -67,11 +67,7 @@ jobs:
         run: |
           terraform init
           terraform apply -var "aws_region=${{ secrets.AWS_REGION }}" -var "app_name=${{ github.event.repository.name }}${{ env.RAND_ID }}" -auto-approve
-
-      - name: Terraform init and apply vpc
-        if: ${{ inputs.create_network }}
-        working-directory: ./deploy-config/infra/network
-        run: ls -a
+        continue-on-error: true
 
       - name: Terraform Output
         id: vpc_tf
@@ -159,6 +155,13 @@ jobs:
         run: |
           terraform init
           terraform apply -var "aws_region=${{ secrets.AWS_REGION }}" -auto-approve
+
+      - name: Terraform destroy on failure
+        if: ${{ inputs.create_network }} && failure()
+        working-directory: ./deploy-config/infra/network
+        run: |
+          terraform destroy -auto-approve
+          exit 1
 
   build-push:
     runs-on: ubuntu-latest
@@ -288,7 +291,7 @@ jobs:
         run: docker logout ${{ needs.build-push.outputs.ecr-registry }}
 
       - name: Clear AWS credentials
-        if: success()
+        if: always()
         run: |
           unset AWS_ACCESS_KEY_ID
           unset AWS_SECRET_ACCESS_KEY
