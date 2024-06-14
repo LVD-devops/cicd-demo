@@ -71,7 +71,7 @@ jobs:
       - name: Terraform init and apply vpc
         if: ${{ inputs.create_network }}
         working-directory: ./deploy-config/infra/network
-        run: ls -a ./deploy-config/infra/network
+        run: ls -a
 
       - name: Terraform Output
         id: vpc_tf
