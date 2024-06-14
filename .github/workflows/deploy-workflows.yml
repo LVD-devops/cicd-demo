@@ -157,10 +157,10 @@ jobs:
           terraform apply -var "aws_region=${{ secrets.AWS_REGION }}" -auto-approve
 
       - name: Terraform destroy on failure
-        if: ${{ inputs.create_network }} && failure()
+        if: ${{ inputs.create_network && failure() }}
         working-directory: ./deploy-config/infra/network
         run: |
-          terraform destroy -auto-approve
+          terraform destroy -var "aws_region=${{ secrets.AWS_REGION }}" -var "app_name=${{ github.event.repository.name }}${{ env.RAND_ID }}"
           exit 1
 
   build-push:
