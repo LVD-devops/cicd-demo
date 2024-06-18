@@ -22,6 +22,6 @@ jobs:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
           ENV: dev
           REPOSITORY: ${{ github.repository }}
-          MYVARIABLE: "hghghghghghgh"
+          MYVARIABLE: "kkkkkk"
         run: |
           gh variable set MYVARIABLE --env $ENV --repo $REPOSITORY --body $MYVARIABLE
