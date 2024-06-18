@@ -7,10 +7,11 @@ export default [
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    ignores: ["**/*.config.ts"],
     rules: {
       // 'no-unused-vars': 'on',
-      // '@typescript-eslint/no-unused-vars': ['error'],
-      // '@typescript-eslint/explicit-function-return-type': ['warn'],
+      '@typescript-eslint/no-unused-vars': ['error'],
+      '@typescript-eslint/explicit-function-return-type': ['warn'],
       '@typescript-eslint/naming-convention': [
         'error',
         {
@@ -22,6 +23,7 @@ export default [
           format: ['snake_case'],
         },
       ],
+      '@typescript-eslint/ban-ts-comment': 'off',
     },
   },
 ];
