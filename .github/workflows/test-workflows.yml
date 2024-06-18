@@ -7,7 +7,7 @@ on:
 jobs:
   check_source:
     runs-on: ubuntu-latest
-
+    environment: dev
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -16,3 +16,12 @@ jobs:
         env:
           GITHUB_CONTEXT: ${{ toJson(github) }}
         run: echo "$GITHUB_CONTEXT"
+
+      - name: Update value new
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          ENV: dev
+          REPOSITORY: ${{ github.repository }}
+          MYVARIABLE: "hghghghghghgh"
+        run: |
+          gh variable set MYVARIABLE --env $ENV --repo $REPOSITORY --body $MYVARIABLE
