@@ -1,7 +1,8 @@
-node_modules
 .git
 .github
 .gitignore
+.idea
+node_modules
 vendor
 dist
-.idea
+

@@ -16,8 +16,8 @@
   },
   "loadBalancers": [
     {
-      "targetGroupArn": "$ECS_ALB_TARGET_GROUP_ARN",
-      "containerName": "$ECS_CONTAINER_NAME",
+      "targetGroupArn": "${ECS_ALB_TARGET_GROUP_ARN}",
+      "containerName": "${ECS_CONTAINER_NAME}-web",
       "containerPort": 80
     }
   ]
