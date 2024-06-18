@@ -28,7 +28,7 @@ RUN npm install webpack --save
 
 WORKDIR /var/www
 
-COPY ./web .
+COPY . .
 
 COPY deploy-config/docker-image/root/ /root
 COPY deploy-config/docker-image/docker/www/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
