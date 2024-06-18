@@ -28,7 +28,7 @@ RUN npm install webpack --save
 
 WORKDIR /var/www
 
-COPY . .
+COPY ./web .
 
 COPY deploy-config/docker-image/root/ /root
 COPY deploy-config/docker-image/docker/www/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
@@ -47,15 +47,6 @@ RUN npm run build
 RUN chmod -R 775 ./vendor/bin
 RUN chmod -R 777 ./storage/ ./bootstrap/cache/
 
-# copy_font.sh
-# for TCPDF
-RUN cp ./setup/fonts/*.z ./vendor/tecnickcom/tcpdf/fonts/
-RUN cp ./setup/fonts/*.php ./vendor/tecnickcom/tcpdf/fonts/
-
-# for MPDF
-RUN mkdir ./vendor/mpdf/mpdf/tmp/mpdf
-RUN chmod 777 ./vendor/mpdf/mpdf/tmp/mpdf
-RUN cp ./setup/fonts/*.ttf ./vendor/mpdf/mpdf/ttfonts/
 
 # Add permission file and run crontab
 RUN chmod 0644 /etc/cron.d/ursula-cron
