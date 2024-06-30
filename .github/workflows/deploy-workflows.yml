@@ -66,6 +66,9 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ECS_SERVICE_DESIRED_CNT: 123
 
+      - name: Convert integerValue to integer
+        run: jq '.desiredCount |= tonumber' service-definition.json > service-definition.json
+
       - name: Show ecspresso.yml
         working-directory: ./deploy-config/ecspresso
         run: |
