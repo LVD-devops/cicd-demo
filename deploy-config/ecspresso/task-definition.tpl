@@ -5,8 +5,8 @@
         {
             "name": "${ECS_CONTAINER_NAME}-web",
             "image": "${ECS_IMAGE}",
-            "cpu": "${ECS_CONTAINER_WEB_VCPU}",
-            "memory": "${ECS_CONTAINER_WEB_MEMORY}",
+            "cpu": $ECS_CONTAINER_WEB_VCPU,
+            "memory": $ECS_CONTAINER_WEB_MEMORY,
             "essential": true,
             "portMappings": [
                 {
@@ -28,8 +28,8 @@
         }
     ],
     "requiresCompatibilities": ["FARGATE"],
-    "cpu": "${ECS_TASK_VCPU}",
-    "memory": "${ECS_TASK_MEMORY}",
+    "cpu": $ECS_TASK_VCPU,
+    "memory": $ECS_TASK_MEMORY,
     "runtimePlatform": {
         "cpuArchitecture": "X86_64",
         "operatingSystemFamily": "LINUX"
