@@ -67,8 +67,7 @@ jobs:
           ECS_SERVICE_DESIRED_CNT: 123
 
       - name: Convert integerValue to integer
-        working-directory: ./deploy-config/ecspresso
-        run: jq '.desiredCount |= tonumber' service-definition.json > service-definition.json
+        run: jq '.desiredCount |= tonumber' ./deploy-config/ecspresso/service-definition.json > ./deploy-config/ecspresso/service-definition.json
 
       - name: Show ecspresso.yml
         working-directory: ./deploy-config/ecspresso
