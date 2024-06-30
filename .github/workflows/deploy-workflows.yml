@@ -52,7 +52,7 @@ jobs:
       - name: Substitute environment variables in file config
         working-directory: ./deploy-config/ecspresso
         run: |
-          envsubst < task-definition.tpl.json > task-definition.json
+          envsubst < task-definition.tpl > task-definition.json
           envsubst < service-definition.tpl > service-definition.json
           envsubst < ecspresso.tpl.yml > ecspresso.yml
         env:
