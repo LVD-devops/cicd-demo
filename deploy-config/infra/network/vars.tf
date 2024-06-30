@@ -7,3 +7,8 @@ variable "app_name" {
   description = "The name of application"
   type        = string
 }
+
+variable "env" {
+    description = "The name of environment"
+    type        = string
+}

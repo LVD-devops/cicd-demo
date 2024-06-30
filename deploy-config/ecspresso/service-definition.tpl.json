@@ -1,6 +1,6 @@
 {
   "launchType": "FARGATE",
-  "desiredCount": 1,
+  "desiredCount": "${ECS_SERVICE_DESIRED_CNT}",
   "taskDefinition": "${ECS_TASK_DEFINITION}",
   "networkConfiguration": {
     "awsvpcConfiguration": {
@@ -16,8 +16,8 @@
   },
   "loadBalancers": [
     {
-      "targetGroupArn": "$ECS_ALB_TARGET_GROUP_ARN",
-      "containerName": "$ECS_CONTAINER_NAME",
+      "targetGroupArn": "${ECS_ALB_TARGET_GROUP_ARN}",
+      "containerName": "${ECS_CONTAINER_NAME}-web",
       "containerPort": 80
     }
   ]

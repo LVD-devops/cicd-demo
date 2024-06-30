@@ -81,6 +81,18 @@ resource "aws_lb_target_group" "main" {
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
   target_type = "ip"
+
+  health_check {
+      enabled             = true
+      interval            = 300
+      path                = "/login"
+      port                = 80
+      protocol            = "HTTP"
+      matcher             = "200-302"
+      timeout             = 5
+      healthy_threshold   = 2
+      unhealthy_threshold = 2
+  }
 }
 
 resource "aws_lb_listener" "http" {
