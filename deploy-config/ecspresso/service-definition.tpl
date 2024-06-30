@@ -1,6 +1,6 @@
 {
   "launchType": "FARGATE",
-  "desiredCount": "${ECS_SERVICE_DESIRED_CNT}",
+  "desiredCount": $ECS_SERVICE_DESIRED_CNT,
   "taskDefinition": "${ECS_TASK_DEFINITION}",
   "networkConfiguration": {
     "awsvpcConfiguration": {
