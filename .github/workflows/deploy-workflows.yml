@@ -53,7 +53,7 @@ jobs:
         working-directory: ./deploy-config/ecspresso
         run: |
           envsubst < task-definition.tpl.json > task-definition.json
-          envsubst < service-definition.tpl.json > service-definition.json
+          envsubst '${ECS_SERVICE_DESIRED_CNT}' < service-definition.tpl.json > service-definition.json
           envsubst < ecspresso.tpl.yml > ecspresso.yml
         env:
           ECS_PUB_SUBNET1: ${{ env.ECS_PUB_SUBNET1 }}
@@ -64,6 +64,7 @@ jobs:
           APP_ENV: 'dev'
           ECS_IMAGE: 'Image test'
           AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECS_SERVICE_DESIRED_CNT: 123
 
       - name: Show ecspresso.yml
         working-directory: ./deploy-config/ecspresso
