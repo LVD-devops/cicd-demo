@@ -73,7 +73,5 @@ jobs:
       - name: Show ecspresso.yml
         working-directory: ./deploy-config/ecspresso
         run: |
-          cat ecspresso.yml
-          cat task-definition.json
           cat service-definition.json
 
